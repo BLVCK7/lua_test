@@ -1,10 +1,11 @@
 -- Макрос ожидает получить положительное число.
--- При наличии десятичной дроби, делает математическое округление.
+-- При наличии десятичной дроби, делает математическое округление(в большую или меньшую сторону).
 -- При неверном типе данных добавит в таблицу - "Not number".
 -- При отрицательном значении добавит в таблицу - "Отрицательное значение".
 -- Ожидает заполнение исходных чисел в столбце А, в любом порядке.
+-- Значения, более чем с одной запятой, будут определяться как "Not number"
 -- После заполнения столбца А исходными данными, открыть меню "Макрокоманды".
--- И нажать на "Выполнить" рядом с навзанием макроса (numToString).
+-- И нажать на "Выполнить" рядом с названием макроса (numToString).
 local tbl = document:getBlocks():getTable('Лист1')
 local number = tbl:getCell('A2'):getFormattedValue()
 
@@ -37,7 +38,8 @@ function stringToNumber(sum)
         return minusValue
     end
 
-    function multiplies(n, titles)
+    -- Выбираем множества. Значения из таблицы unitsPlural
+    function takePlural(n, titles)
         local cases = {3, 1, 2, 2, 2, 3}
         local index = 0
 
@@ -54,11 +56,12 @@ function stringToNumber(sum)
         return s:gsub("^%s*(.-)%s*$", "%1")
     end
 
-    -- Основной цикл
+    -- Основной цикл. Каждый раз будет высчитывать новое число(number) и прибавляться triplePos на 1, пока число(number) не станет 0. 
+    -- Исходя из условий, в которые будем попадать - соберется нужная нам строка.
     while (number > 0) do
         local tripleStr = ""
         local tripleUnit = ""
-        local triple = number % 1000 -- Проверка на три нуля. 1000 => 0
+        local triple = number % 1000 -- Проверка на три нуля. number > 1000 => 0, 100 => 100, 10 => 10, 0 => 0
 
         number = math.floor(number / 1000)
         triplePos = triplePos + 1
@@ -69,7 +72,7 @@ function stringToNumber(sum)
 
         if (triple > 0) then
             local unitPlural = unitsPlural[triplePos]
-            tripleUnit = multiplies(triple, unitPlural)
+            tripleUnit = takePlural(triple, unitPlural)
         end
 
         if (triple >= 100) then
@@ -93,10 +96,12 @@ function stringToNumber(sum)
         resultString = tripleStr .. " " .. tripleUnit .. " " .. resultString
     end
 
+    -- Подставляем ноль
     if (resultString == "") then
         resultString = zero
     end
 
+    -- Удаляем пробелы, если есть
     resultString = (deleteSpaces(resultString))
     return resultString
 end
@@ -106,6 +111,7 @@ function execute()
     local rowCount = tbl:getRowsCount()
 
     for i = 1, (rowCount - 1) do
+        -- Собираем значения из столбца А и форматируем в number, если не получилось -> nil
         local value = tbl:getCell(DocumentAPI.CellPosition(i, 0)):getFormattedValue()
         local format = tonumber(value)
 
